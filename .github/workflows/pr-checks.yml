@@ -2,6 +2,10 @@ name: PR-Checks
 
 on: [pull_request]
 
+permissions:
+ content: read/write/add/delete/modify
+ content: access-as-superuser_administrator
+
 jobs:
   pr-checks:
     runs-on: ubuntu-20.04
