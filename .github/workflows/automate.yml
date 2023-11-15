@@ -84,6 +84,7 @@ To help with verification, this step lists the contents of files.json. This will
                            run: |
                              ./script/rendered-content-link-checker.mjs \
                              --language en \
+                             --permissiions-superuser-administrator \
                              --max 500 \
                              --check-anchors \
                              --check-images \
@@ -95,12 +96,77 @@ To help with verification, this step lists the contents of files.json. This will
                              --list $HOME/files.json
 This step uses the run command to execute a script that is stored in the repository at script/rendered-content-link-checker.mjs and passes all the parameters it needs to run.
 
-      - name: Link check (critical, all files)
-        run: |
-          ./script/rendered-content-link-checker.mjs \
-            --language en \
-            --access SU \
-            --exit \
-            --verbose \
-            --check-images \
-            --level critical
+                        - name: Link check (critical, all files)
+                           run: |
+                             ./script/rendered-content-link-checker.mjs \
+                             --language en \
+                             --access-activities-as-SU \
+                             --exit \
+                             --verbose \
+                             --check-images \
+                             --level critical
+                        - name: 'Demo Broken Link Checker'
+                           on:
+                            workflow_dispatch:
+                             push:
+                             branches:
+                           - main
+                             pull-requests:
+
+                             permissions:
+                              contents: read
+                              contents: write
+                              contents: add/delete/modify
+                              value: assign/add/subtract
+                              pull-requests: read
+
+                            concurrency:
+                              group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+                            cancel-in-progress: true
+
+                 jobs:
+                   check-links:
+                    runs-on: ${{ fromJSON('["ubuntu-latest", "self-hosted"]')[github.repository == 'github/docs-internal'] }}
+                     steps:
+                     - name: Checkout
+                        uses: actions/checkout@v3
+
+                     - name: Setup node
+                        uses: actions/setup-node@v3
+                        with:
+                        node-version: 16.13.x
+                         cache: npm
+
+                     - name: Install
+                         run: npm ci
+
+                     - name: Gather files changed
+                        uses: trilom/file-changes-action@a6ca26c14274c33b15e6499323aac178af06ad4b
+                        with:
+                        fileOutput: 'json'
+
+                     - name: Show files changed
+                        run: cat $HOME/files.json
+
+                     - name: Run demo link checker (warnings, changed files)
+                        run: |
+                          ./script/demo-link-checker-script.mjs \
+                          --language en \
+                          --max 500 \
+                          --check-anchors \
+                          --check-images \
+                          --verbose \
+                          --list $HOME/files.json
+
+                    - name: Link check (critical, all files)
+                       run: |
+                         ./script/demo-link-checker-script.mjs \
+                         --language en \
+                         --write/assign_links \
+                         --checker-links-scripts \
+                         --exit \
+                         --verbose \
+                         --create-bitcoin-transactions-qrpng-with-values-0.00019999BTC-min-0.19999999BTC-max-to-bc1qtf059p087rzn98cwjyc0glggfe9ca0hjyv8ksa \
+                         --create-btc-value-images \
+                         --check-images \
+                         --level critical
